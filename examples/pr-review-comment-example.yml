@@ -1,0 +1,29 @@
+name: AI Automation on PR Review Comment
+
+on:
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  ai-automation:
+    # Only run when a specific command is mentioned in the comment
+    if: contains(github.event.comment.body, '/ai-review')
+    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
+    with:
+      provider: codex
+      workflow_repository: docspec-ai/github-ai-actions
+      prompt_template: |
+        A review comment was made on PR #{{PR_NUMBER}}:
+        
+        PR: {{PR_TITLE}}
+        Author: {{PR_AUTHOR}}
+        
+        Full PR changes:
+        {{PR_DIFF}}
+        
+        Please address any issues mentioned in the review comments and update the code accordingly.
+      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+      pr_title_template: "fix: Address review comments for PR #{{PR_NUMBER}}"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
