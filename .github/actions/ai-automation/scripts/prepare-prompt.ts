@@ -202,24 +202,24 @@ function substituteVariables(template: string, data: PRData): string {
   // Replace all variable placeholders
   // Use function replacement to prevent interpretation of special dollar-sign patterns
   result = result.replace(/\{\{PR_DIFF\}\}/g, () => escapeVariable(data.diff));
-  result = result.replace(/\{\{PR_TITLE\}\}/g, () => escapeVariable(data.title));
-  result = result.replace(
-    /\{\{PR_NUMBER\}\}/g,
-    () => escapeVariable(String(data.number)),
+  result = result.replace(/\{\{PR_TITLE\}\}/g, () =>
+    escapeVariable(data.title),
   );
-  result = result.replace(/\{\{PR_AUTHOR\}\}/g, () => escapeVariable(data.author));
+  result = result.replace(/\{\{PR_NUMBER\}\}/g, () =>
+    escapeVariable(String(data.number)),
+  );
+  result = result.replace(/\{\{PR_AUTHOR\}\}/g, () =>
+    escapeVariable(data.author),
+  );
   result = result.replace(/\{\{PR_BODY\}\}/g, () => escapeVariable(data.body));
-  result = result.replace(
-    /\{\{CHANGED_FILES\}\}/g,
-    () => escapeVariable(data.changedFiles.join("\n")),
+  result = result.replace(/\{\{CHANGED_FILES\}\}/g, () =>
+    escapeVariable(data.changedFiles.join("\n")),
   );
-  result = result.replace(
-    /\{\{REPOSITORY\}\}/g,
-    () => escapeVariable(process.env.REPOSITORY || ""),
+  result = result.replace(/\{\{REPOSITORY\}\}/g, () =>
+    escapeVariable(process.env.REPOSITORY || ""),
   );
-  result = result.replace(
-    /\{\{BASE_BRANCH\}\}/g,
-    () => escapeVariable(data.baseBranch),
+  result = result.replace(/\{\{BASE_BRANCH\}\}/g, () =>
+    escapeVariable(data.baseBranch),
   );
 
   return result;
@@ -234,7 +234,9 @@ async function main() {
 
     const prNumber = parseInt(process.env.PR_NUMBER || "");
     if (!prNumber || isNaN(prNumber)) {
-      throw new Error("PR_NUMBER environment variable is required and must be a number");
+      throw new Error(
+        "PR_NUMBER environment variable is required and must be a number",
+      );
     }
 
     const githubToken = process.env.GITHUB_TOKEN;
@@ -282,8 +284,7 @@ async function main() {
     console.log(`Base branch: ${baseBranch}`);
     console.log(`PR #${prData.number}: ${prData.title}`);
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     core.setFailed(`Failed to prepare prompt: ${errorMessage}`);
     process.exit(1);
   }
@@ -292,4 +293,3 @@ async function main() {
 if (import.meta.main) {
   main();
 }
-

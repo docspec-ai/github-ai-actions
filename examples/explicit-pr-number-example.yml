@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to process'
+        description: "PR number to process"
         required: true
         type: string
       prompt:
-        description: 'Custom prompt (optional)'
+        description: "Custom prompt (optional)"
         required: false
         type: string
 
@@ -24,4 +24,3 @@ jobs:
           pr_number: ${{ inputs.pr_number }}
           prompt_template: ${{ inputs.prompt || 'Analyze PR #{{PR_NUMBER}} and update documentation based on changes: {{PR_DIFF}}' }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-

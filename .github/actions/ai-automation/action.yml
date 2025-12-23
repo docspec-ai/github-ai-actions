@@ -107,7 +107,7 @@ runs:
           echo "Using explicitly provided PR number: ${{ inputs.pr_number }}"
           exit 0
         fi
-        
+
         # Try to extract from different event types
         # PR events (pull_request, pull_request_target)
         if [ -n "${{ github.event.pull_request.number }}" ] && [ "${{ github.event.pull_request.number }}" != "" ]; then
@@ -115,7 +115,7 @@ runs:
           echo "Extracted PR number from pull_request event: ${{ github.event.pull_request.number }}"
           exit 0
         fi
-        
+
         # Issue comment events (could be on a PR)
         if [ -n "${{ github.event.issue.number }}" ] && [ "${{ github.event.issue.number }}" != "" ]; then
           # Check if the issue is actually a PR by querying the GitHub API
@@ -139,7 +139,7 @@ runs:
             echo "Failed to fetch issue #${ISSUE_NUMBER} from API" >&2
           fi
         fi
-        
+
         # If we get here, we couldn't extract a PR number
         echo "Error: Could not extract PR number from event context" >&2
         echo "Event name: ${{ github.event_name }}" >&2
@@ -184,7 +184,7 @@ runs:
         BRANCH_PREFIX="${{ inputs.branch_prefix }}"
         PR_NUMBER="${{ steps.prepare-prompt.outputs.pr_number }}"
         BRANCH_NAME="${BRANCH_PREFIX}pr-${PR_NUMBER}-$(date +%s)"
-        
+
         git fetch origin "$BASE_BRANCH"
         git checkout -b "$BRANCH_NAME" "origin/$BASE_BRANCH" || git checkout -b "$BRANCH_NAME"
         echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
@@ -209,7 +209,7 @@ runs:
       shell: bash
       run: |
         BRANCH_NAME="${{ steps.codex-branch.outputs.branch_name }}"
-        
+
         # Check if there are any changes
         if [ -n "$(git status --porcelain)" ]; then
           git config user.name "github-ai-actions[bot]"
@@ -261,4 +261,3 @@ runs:
         PR_BODY: ${{ steps.prepare-prompt.outputs.pr_body }}
         REPOSITORY: ${{ github.repository }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
-

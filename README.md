@@ -31,12 +31,12 @@ jobs:
       - name: Run AI automation
         uses: docspec-ai/github-ai-actions@main
         with:
-          provider: claude  # or 'codex'
+          provider: claude # or 'codex'
           prompt_template: |
             Analyze the changes in this merged PR:
-            
+
             {{PR_DIFF}}
-            
+
             Based on these changes, update the CHANGELOG.md file
             to document what was added in PR #{{PR_NUMBER}}.
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -46,6 +46,7 @@ jobs:
 ### 2. Set Up Secrets
 
 Add your API key as a repository secret:
+
 - Go to Settings → Secrets and variables → Actions
 - For Claude: Add a secret named `ANTHROPIC_API_KEY` with your API key
 - For Codex: Add a secret named `OPENAI_API_KEY` with your API key
@@ -53,6 +54,7 @@ Add your API key as a repository secret:
 ### 3. Configure Permissions
 
 The action requires the following permissions (automatically set):
+
 - `contents: write` - To create branches and commits
 - `pull-requests: write` - To create PRs
 - `id-token: write` - For OIDC authentication (if using Bedrock/Vertex/Foundry)
@@ -93,7 +95,7 @@ jobs:
           provider: claude
           prompt_template: |
             Review the changes in PR #{{PR_NUMBER}} and update documentation.
-            
+
             Changes:
             {{PR_DIFF}}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -117,7 +119,7 @@ jobs:
           provider: codex
           prompt_template: |
             Review the changes in PR #{{PR_NUMBER}} and update documentation.
-            
+
             Changes:
             {{PR_DIFF}}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
@@ -142,13 +144,13 @@ jobs:
           prompt_template: |
             PR #{{PR_NUMBER}}: {{PR_TITLE}}
             Author: {{PR_AUTHOR}}
-            
+
             Changes:
             {{PR_DIFF}}
-            
+
             Changed files:
             {{CHANGED_FILES}}
-            
+
             Please:
             1. Update the CHANGELOG.md with these changes
             2. Ensure all new functions are documented
@@ -158,10 +160,10 @@ jobs:
           pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
           pr_body_template: |
             This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
-            
+
             Original PR: {{PR_TITLE}}
             Author: {{PR_AUTHOR}}
-            
+
             Generated with [Claude Code](https://claude.ai/code)
           claude_args: "--max-turns 5 --model claude-3-5-sonnet-20241022"
 ```
@@ -185,13 +187,13 @@ jobs:
           prompt_template: |
             PR #{{PR_NUMBER}}: {{PR_TITLE}}
             Author: {{PR_AUTHOR}}
-            
+
             Changes:
             {{PR_DIFF}}
-            
+
             Changed files:
             {{CHANGED_FILES}}
-            
+
             Please:
             1. Update the CHANGELOG.md with these changes
             2. Ensure all new functions are documented
@@ -204,10 +206,10 @@ jobs:
           pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
           pr_body_template: |
             This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
-            
+
             Original PR: {{PR_TITLE}}
             Author: {{PR_AUTHOR}}
-            
+
             Generated with [Codex](https://github.com/openai/codex)
 ```
 
@@ -269,7 +271,7 @@ The following variables can be used in `prompt_template`, `pr_title_template`, a
 3. **PR Number Extraction**: Automatically extracts PR number from event context, or uses explicit `pr_number` input
 4. **Data Extraction**: Fetches PR data (diff, metadata) using GitHub API
 5. **Variable Substitution**: Replaces placeholders in your prompt template with actual PR data
-6. **AI Execution**: 
+6. **AI Execution**:
    - **Claude**: Runs Claude Code Action which handles branch creation and commits automatically
    - **Codex**: Runs Codex Action, then action creates branch, commits changes, and pushes
 7. **PR Creation**: If AI makes changes, automatically creates a new PR
@@ -280,7 +282,6 @@ The action supports any GitHub event that can provide a PR number. You can trigg
 
 - **PR Merge Events** (default): `pull_request` with `types: [closed]` and `merged == true`
 - **Comment Events**: `issue_comment` on PRs
-- **PR Review Comments**: `pull_request_review_comment`
 - **Manual Dispatch**: `workflow_dispatch` with explicit `pr_number` input
 - **Any Custom Event**: As long as you provide `pr_number` explicitly
 
@@ -307,10 +308,10 @@ jobs:
           provider: claude
           prompt_template: |
             A comment was made on PR #{{PR_NUMBER}}:
-            
+
             PR: {{PR_TITLE}}
             Changes: {{PR_DIFF}}
-            
+
             Please review and update documentation.
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
@@ -326,7 +327,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to process'
+        description: "PR number to process"
         required: true
         type: string
 
@@ -338,36 +339,10 @@ jobs:
         uses: docspec-ai/github-ai-actions@main
         with:
           provider: claude
-          pr_number: ${{ inputs.pr_number }}  # Explicit PR number
+          pr_number: ${{ inputs.pr_number }} # Explicit PR number
           prompt_template: |
             Analyze PR #{{PR_NUMBER}} and update documentation: {{PR_DIFF}}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-### Example: PR Review Comment Trigger
-
-Trigger on PR review comments with a command:
-
-```yaml
-name: AI Automation on Review Comment
-
-on:
-  pull_request_review_comment:
-    types: [created]
-
-jobs:
-  ai-automation:
-    # Only run when a specific command is mentioned
-    if: contains(github.event.comment.body, '/ai-review')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run AI automation
-        uses: docspec-ai/github-ai-actions@main
-        with:
-          provider: codex
-          prompt_template: |
-            Address review comments on PR #{{PR_NUMBER}}: {{PR_DIFF}}
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 See the `examples/` directory for more trigger examples.
@@ -379,13 +354,13 @@ See the `examples/` directory for more trigger examples.
 ```yaml
 prompt_template: |
   The following PR was just merged:
-  
+
   PR #{{PR_NUMBER}}: {{PR_TITLE}}
   Author: {{PR_AUTHOR}}
-  
+
   Changes:
   {{PR_DIFF}}
-  
+
   Please update CHANGELOG.md to document these changes.
   Follow the existing format and add an entry under "Unreleased".
 ```
@@ -395,11 +370,11 @@ prompt_template: |
 ```yaml
 prompt_template: |
   PR #{{PR_NUMBER}} added new features. Please:
-  
+
   1. Review the changes: {{PR_DIFF}}
   2. Update API documentation in docs/api.md
   3. Add examples for any new functions
-  
+
   Changed files:
   {{CHANGED_FILES}}
 ```
@@ -409,9 +384,9 @@ prompt_template: |
 ```yaml
 prompt_template: |
   PR #{{PR_NUMBER}} by {{PR_AUTHOR}} was just merged.
-  
+
   {{PR_DIFF}}
-  
+
   Please:
   - Check if any TODOs or FIXMEs were introduced
   - Verify test coverage is adequate

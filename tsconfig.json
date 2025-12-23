@@ -17,7 +17,6 @@
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["scripts/**/*"],
+  "include": [".github/actions/ai-automation/scripts/**/*"],
   "exclude": ["node_modules"]
 }
-
