@@ -165,8 +165,8 @@ async function fetchPRData(
     const baseRef = pr.baseRefName;
     const headRef = pr.headRefOid;
 
-    // Fetch the commits first
-    execFileSync("git", ["fetch", "origin", baseRef, headRef], {
+    // Fetch the base branch (the commit SHA is already available due to fetch-depth: 0)
+    execFileSync("git", ["fetch", "origin", baseRef], {
       stdio: "pipe",
     });
     const diffOutput = execFileSync(
