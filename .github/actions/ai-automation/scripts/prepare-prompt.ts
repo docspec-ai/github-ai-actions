@@ -200,25 +200,26 @@ function substituteVariables(template: string, data: PRData): string {
   let result = template;
 
   // Replace all variable placeholders
-  result = result.replace(/\{\{PR_DIFF\}\}/g, escapeVariable(data.diff));
-  result = result.replace(/\{\{PR_TITLE\}\}/g, escapeVariable(data.title));
+  // Use function replacement to prevent interpretation of special dollar-sign patterns
+  result = result.replace(/\{\{PR_DIFF\}\}/g, () => escapeVariable(data.diff));
+  result = result.replace(/\{\{PR_TITLE\}\}/g, () => escapeVariable(data.title));
   result = result.replace(
     /\{\{PR_NUMBER\}\}/g,
-    escapeVariable(String(data.number)),
+    () => escapeVariable(String(data.number)),
   );
-  result = result.replace(/\{\{PR_AUTHOR\}\}/g, escapeVariable(data.author));
-  result = result.replace(/\{\{PR_BODY\}\}/g, escapeVariable(data.body));
+  result = result.replace(/\{\{PR_AUTHOR\}\}/g, () => escapeVariable(data.author));
+  result = result.replace(/\{\{PR_BODY\}\}/g, () => escapeVariable(data.body));
   result = result.replace(
     /\{\{CHANGED_FILES\}\}/g,
-    escapeVariable(data.changedFiles.join("\n")),
+    () => escapeVariable(data.changedFiles.join("\n")),
   );
   result = result.replace(
     /\{\{REPOSITORY\}\}/g,
-    escapeVariable(process.env.REPOSITORY || ""),
+    () => escapeVariable(process.env.REPOSITORY || ""),
   );
   result = result.replace(
     /\{\{BASE_BRANCH\}\}/g,
-    escapeVariable(data.baseBranch),
+    () => escapeVariable(data.baseBranch),
   );
 
   return result;

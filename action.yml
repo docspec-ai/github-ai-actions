@@ -69,6 +69,9 @@ inputs:
   base_branch:
     description: "Base branch to create new branch from (defaults to repository default branch)"
     required: false
+  github_token:
+    description: "GitHub API token (pass ${{ secrets.GITHUB_TOKEN }} from your workflow)"
+    required: true
 outputs:
   branch_name:
     description: "Name of the branch created by the AI assistant"
@@ -101,4 +104,5 @@ runs:
         pr_title_template: ${{ inputs.pr_title_template }}
         pr_body_template: ${{ inputs.pr_body_template }}
         base_branch: ${{ inputs.base_branch }}
+        github_token: ${{ inputs.github_token }}
 

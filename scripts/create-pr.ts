@@ -14,7 +14,8 @@ function substituteVariables(template: string, variables: Record<string, string>
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-    result = result.replace(regex, value);
+    // Use function replacement to prevent interpretation of special dollar-sign patterns
+    result = result.replace(regex, () => value);
   }
   return result;
 }
