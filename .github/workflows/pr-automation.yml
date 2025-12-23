@@ -176,7 +176,7 @@ jobs:
             ISSUE_NUMBER="${{ github.event.issue.number }}"
             API_RESPONSE=$(curl -s -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -H "Accept: application/vnd.github.v3+json" \
-              "${{ env.GITHUB_API_URL }}/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}" || echo "")
+              "${GITHUB_API_URL}/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}" || echo "")
             
             if [ -n "$API_RESPONSE" ]; then
               # Extract PR number from the response (if it's a PR, pull_request.url will be present)
@@ -199,8 +199,6 @@ jobs:
           echo "Event name: ${{ github.event_name }}" >&2
           echo "Please provide pr_number input explicitly, or trigger from a PR-related event" >&2
           exit 1
-        env:
-          GITHUB_API_URL: ${{ env.GITHUB_API_URL }}
 
       - name: Prepare prompt with PR data
         id: prepare-prompt
@@ -213,7 +211,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           BASE_BRANCH: ${{ inputs.base_branch || '' }}
-          GITHUB_API_URL: ${{ env.GITHUB_API_URL }}
 
       # Claude Code execution
       - name: Run Claude Code
@@ -317,4 +314,3 @@ jobs:
           PR_BODY: ${{ steps.prepare-prompt.outputs.pr_body }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_API_URL: ${{ env.GITHUB_API_URL }}
