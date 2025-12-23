@@ -21,33 +21,15 @@ const PR_QUERY = `
           login
         }
         baseRefName
-        headRefName
         headRefOid
-        createdAt
-        updatedAt
-        lastEditedAt
-        additions
-        deletions
-        state
-        commits(first: 100) {
-          totalCount
+        commits(first: 1) {
           nodes {
-            commit {
-              oid
-              message
-              author {
-                name
-                email
-              }
-            }
+            __typename
           }
         }
         files(first: 100) {
           nodes {
             path
-            additions
-            deletions
-            changeType
           }
         }
       }
@@ -64,33 +46,15 @@ type PullRequestQueryResponse = {
         login: string;
       } | null;
       baseRefName: string;
-      headRefName: string;
       headRefOid: string;
-      createdAt: string;
-      updatedAt: string | null;
-      lastEditedAt: string | null;
-      additions: number;
-      deletions: number;
-      state: string;
       commits: {
-        totalCount: number;
         nodes: Array<{
-          commit: {
-            oid: string;
-            message: string;
-            author: {
-              name: string;
-              email: string;
-            };
-          };
+          __typename: string;
         }>;
       };
       files: {
         nodes: Array<{
           path: string;
-          additions: number;
-          deletions: number;
-          changeType: string;
         }>;
       };
     } | null;
