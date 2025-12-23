@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 /**
- * Extracts PR data from a merged pull request and substitutes variables
- * in the prompt template.
+ * Extracts PR data from a pull request and substitutes variables
+ * in the prompt template. Works with PRs in any state (OPEN, MERGED, CLOSED).
  */
 
 import * as core from "@actions/core";
@@ -152,10 +152,6 @@ async function fetchPRData(
   const pr = result.repository.pullRequest;
   if (!pr) {
     throw new Error(`PR #${prNumber} not found`);
-  }
-
-  if (pr.state !== "MERGED") {
-    throw new Error(`PR #${prNumber} is not merged (state: ${pr.state})`);
   }
 
   const changedFiles = pr.files?.nodes?.map((file) => file.path) || [];
