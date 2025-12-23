@@ -1,0 +1,26 @@
+name: AI Automation with Explicit PR Number
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to process"
+        required: true
+        type: string
+      prompt:
+        description: "Custom prompt (optional)"
+        required: false
+        type: string
+
+jobs:
+  ai-automation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          # Explicitly provide PR number since we're using workflow_dispatch
+          pr_number: ${{ inputs.pr_number }}
+          prompt_template: ${{ inputs.prompt || 'Analyze PR #{{PR_NUMBER}} and update documentation based on changes: {{PR_DIFF}}' }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
