@@ -14,14 +14,14 @@ on:
 
 jobs:
   ai-automation:
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude
-      workflow_repository: docspec-ai/github-ai-actions
-      # Explicitly provide PR number since we're using workflow_dispatch
-      pr_number: ${{ inputs.pr_number }}
-      prompt_template: ${{ inputs.prompt || 'Analyze PR #{{PR_NUMBER}} and update documentation based on changes: {{PR_DIFF}}' }}
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          # Explicitly provide PR number since we're using workflow_dispatch
+          pr_number: ${{ inputs.pr_number }}
+          prompt_template: ${{ inputs.prompt || 'Analyze PR #{{PR_NUMBER}} and update documentation based on changes: {{PR_DIFF}}' }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 

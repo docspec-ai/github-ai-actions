@@ -1,6 +1,6 @@
 # GitHub AI Actions
 
-A reusable GitHub Actions workflow that automatically runs AI code assistants (Claude Code or Codex) that create pull requests. Supports flexible triggers including PR merge events, comment events, manual dispatch, and more.
+A composite GitHub Action that automatically runs AI code assistants (Claude Code or Codex) to create pull requests. Supports flexible triggers including PR merge events, comment events, manual dispatch, and more.
 
 ## Features
 
@@ -12,7 +12,7 @@ A reusable GitHub Actions workflow that automatically runs AI code assistants (C
 
 ## Quick Start
 
-### 1. Add the Workflow to Your Repository
+### 1. Add the Action to Your Workflow
 
 Create `.github/workflows/pr-automation.yml` in your repository:
 
@@ -26,21 +26,21 @@ on:
 jobs:
   post-merge:
     if: github.event.pull_request.merged == true
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude  # or 'codex'
-      workflow_repository: docspec-ai/github-ai-actions
-      prompt_template: |
-        Analyze the changes in this merged PR:
-        
-        {{PR_DIFF}}
-        
-        Based on these changes, update the CHANGELOG.md file
-        to document what was added in PR #{{PR_NUMBER}}.
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-      pr_title_template: "docs: Update CHANGELOG for PR #{{PR_NUMBER}}"
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude  # or 'codex'
+          prompt_template: |
+            Analyze the changes in this merged PR:
+            
+            {{PR_DIFF}}
+            
+            Based on these changes, update the CHANGELOG.md file
+            to document what was added in PR #{{PR_NUMBER}}.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          pr_title_template: "docs: Update CHANGELOG for PR #{{PR_NUMBER}}"
 ```
 
 ### 2. Set Up Secrets
@@ -52,14 +52,14 @@ Add your API key as a repository secret:
 
 ### 3. Configure Permissions
 
-The workflow requires the following permissions (automatically set):
+The action requires the following permissions (automatically set):
 - `contents: write` - To create branches and commits
 - `pull-requests: write` - To create PRs
 - `id-token: write` - For OIDC authentication (if using Bedrock/Vertex/Foundry)
 
 ## Provider Selection
 
-This workflow supports two AI providers:
+This action supports two AI providers:
 
 ### Claude Code (Default)
 
@@ -69,7 +69,7 @@ Claude Code automatically handles branch creation, commits, and changes. It's th
 
 ### Codex
 
-Codex executes in your repository and makes changes directly. The workflow handles branch creation and PR creation.
+Codex executes in your repository and makes changes directly. The action handles branch creation and PR creation.
 
 **Required**: `openai_api_key`
 
@@ -85,16 +85,18 @@ on:
 jobs:
   post-merge:
     if: github.event.pull_request.merged == true
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude
-      workflow_repository: docspec-ai/github-ai-actions
-      prompt_template: |
-        Review the changes in PR #{{PR_NUMBER}} and update documentation.
-        
-        Changes:
-        {{PR_DIFF}}
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          prompt_template: |
+            Review the changes in PR #{{PR_NUMBER}} and update documentation.
+            
+            Changes:
+            {{PR_DIFF}}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 ### Basic Example with Codex
@@ -107,16 +109,18 @@ on:
 jobs:
   post-merge:
     if: github.event.pull_request.merged == true
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: codex
-      workflow_repository: docspec-ai/github-ai-actions
-      prompt_template: |
-        Review the changes in PR #{{PR_NUMBER}} and update documentation.
-        
-        Changes:
-        {{PR_DIFF}}
-      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: codex
+          prompt_template: |
+            Review the changes in PR #{{PR_NUMBER}} and update documentation.
+            
+            Changes:
+            {{PR_DIFF}}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 ### Advanced Example with Claude
@@ -129,36 +133,37 @@ on:
 jobs:
   post-merge:
     if: github.event.pull_request.merged == true
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude
-      workflow_repository: docspec-ai/github-ai-actions
-      workflow_ref: main
-      prompt_template: |
-        PR #{{PR_NUMBER}}: {{PR_TITLE}}
-        Author: {{PR_AUTHOR}}
-        
-        Changes:
-        {{PR_DIFF}}
-        
-        Changed files:
-        {{CHANGED_FILES}}
-        
-        Please:
-        1. Update the CHANGELOG.md with these changes
-        2. Ensure all new functions are documented
-        3. Check for any breaking changes
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-      branch_prefix: "auto/"
-      pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
-      pr_body_template: |
-        This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
-        
-        Original PR: {{PR_TITLE}}
-        Author: {{PR_AUTHOR}}
-        
-        Generated with [Claude Code](https://claude.ai/code)
-      claude_args: "--max-turns 5 --model claude-3-5-sonnet-20241022"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          prompt_template: |
+            PR #{{PR_NUMBER}}: {{PR_TITLE}}
+            Author: {{PR_AUTHOR}}
+            
+            Changes:
+            {{PR_DIFF}}
+            
+            Changed files:
+            {{CHANGED_FILES}}
+            
+            Please:
+            1. Update the CHANGELOG.md with these changes
+            2. Ensure all new functions are documented
+            3. Check for any breaking changes
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          branch_prefix: "auto/"
+          pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
+          pr_body_template: |
+            This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
+            
+            Original PR: {{PR_TITLE}}
+            Author: {{PR_AUTHOR}}
+            
+            Generated with [Claude Code](https://claude.ai/code)
+          claude_args: "--max-turns 5 --model claude-3-5-sonnet-20241022"
 ```
 
 ### Advanced Example with Codex
@@ -171,38 +176,39 @@ on:
 jobs:
   post-merge:
     if: github.event.pull_request.merged == true
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: codex
-      workflow_repository: docspec-ai/github-ai-actions
-      workflow_ref: main
-      prompt_template: |
-        PR #{{PR_NUMBER}}: {{PR_TITLE}}
-        Author: {{PR_AUTHOR}}
-        
-        Changes:
-        {{PR_DIFF}}
-        
-        Changed files:
-        {{CHANGED_FILES}}
-        
-        Please:
-        1. Update the CHANGELOG.md with these changes
-        2. Ensure all new functions are documented
-        3. Check for any breaking changes
-      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-      codex_sandbox: workspace-write
-      codex_safety_strategy: drop-sudo
-      codex_args: '["--max-turns", "5"]'
-      branch_prefix: "auto/"
-      pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
-      pr_body_template: |
-        This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
-        
-        Original PR: {{PR_TITLE}}
-        Author: {{PR_AUTHOR}}
-        
-        Generated with [Codex](https://github.com/openai/codex)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: codex
+          prompt_template: |
+            PR #{{PR_NUMBER}}: {{PR_TITLE}}
+            Author: {{PR_AUTHOR}}
+            
+            Changes:
+            {{PR_DIFF}}
+            
+            Changed files:
+            {{CHANGED_FILES}}
+            
+            Please:
+            1. Update the CHANGELOG.md with these changes
+            2. Ensure all new functions are documented
+            3. Check for any breaking changes
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          codex_sandbox: workspace-write
+          codex_safety_strategy: drop-sudo
+          codex_args: '["--max-turns", "5"]'
+          branch_prefix: "auto/"
+          pr_title_template: "chore: Auto-update docs for PR #{{PR_NUMBER}}"
+          pr_body_template: |
+            This PR contains automated documentation updates for PR #{{PR_NUMBER}}.
+            
+            Original PR: {{PR_TITLE}}
+            Author: {{PR_AUTHOR}}
+            
+            Generated with [Codex](https://github.com/openai/codex)
 ```
 
 ## Input Parameters
@@ -210,7 +216,6 @@ jobs:
 ### Required
 
 - `prompt_template` - Your prompt template with variable placeholders
-- `workflow_repository` - Repository containing the workflow scripts (format: `owner/repo`)
 
 ### Trigger Configuration
 
@@ -243,7 +248,6 @@ jobs:
 - `pr_title_template` - Template for created PR title (supports variable placeholders)
 - `pr_body_template` - Template for created PR body (supports variable placeholders)
 - `base_branch` - Base branch to create new branch from (defaults to repository default)
-- `workflow_ref` - Ref (branch/tag) of the workflow repository to use (defaults to the same ref used to call the workflow)
 
 ## Variable Placeholders
 
@@ -260,18 +264,19 @@ The following variables can be used in `prompt_template`, `pr_title_template`, a
 
 ## How It Works
 
-1. **Trigger**: Workflow can be triggered by various events (PR merge, comments, manual dispatch, etc.)
-2. **PR Number Extraction**: Automatically extracts PR number from event context, or uses explicit `pr_number` input
-3. **Data Extraction**: Fetches PR data (diff, metadata) using GitHub API
-4. **Variable Substitution**: Replaces placeholders in your prompt template with actual PR data
-5. **AI Execution**: 
+1. **Trigger**: Action can be triggered by various events (PR merge, comments, manual dispatch, etc.)
+2. **Isolated Execution**: Action runs in GitHub's isolated environment
+3. **PR Number Extraction**: Automatically extracts PR number from event context, or uses explicit `pr_number` input
+4. **Data Extraction**: Fetches PR data (diff, metadata) using GitHub API
+5. **Variable Substitution**: Replaces placeholders in your prompt template with actual PR data
+6. **AI Execution**: 
    - **Claude**: Runs Claude Code Action which handles branch creation and commits automatically
-   - **Codex**: Runs Codex Action, then workflow creates branch, commits changes, and pushes
-6. **PR Creation**: If AI makes changes, automatically creates a new PR
+   - **Codex**: Runs Codex Action, then action creates branch, commits changes, and pushes
+7. **PR Creation**: If AI makes changes, automatically creates a new PR
 
 ## Custom Triggers
 
-The workflow supports any GitHub event that can provide a PR number. You can trigger it from:
+The action supports any GitHub event that can provide a PR number. You can trigger it from:
 
 - **PR Merge Events** (default): `pull_request` with `types: [closed]` and `merged == true`
 - **Comment Events**: `issue_comment` on PRs
@@ -294,20 +299,20 @@ jobs:
   ai-automation:
     # Only run on PR comments (not regular issues)
     if: github.event.issue.pull_request != null
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude
-      workflow_repository: docspec-ai/github-ai-actions
-      prompt_template: |
-        A comment was made on PR #{{PR_NUMBER}}:
-        
-        PR: {{PR_TITLE}}
-        Changes: {{PR_DIFF}}
-        
-        Please review and update documentation.
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          prompt_template: |
+            A comment was made on PR #{{PR_NUMBER}}:
+            
+            PR: {{PR_TITLE}}
+            Changes: {{PR_DIFF}}
+            
+            Please review and update documentation.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 ### Example: Manual Dispatch with Explicit PR Number
@@ -327,16 +332,16 @@ on:
 
 jobs:
   ai-automation:
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: claude
-      workflow_repository: docspec-ai/github-ai-actions
-      pr_number: ${{ inputs.pr_number }}  # Explicit PR number
-      prompt_template: |
-        Analyze PR #{{PR_NUMBER}} and update documentation: {{PR_DIFF}}
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: claude
+          pr_number: ${{ inputs.pr_number }}  # Explicit PR number
+          prompt_template: |
+            Analyze PR #{{PR_NUMBER}} and update documentation: {{PR_DIFF}}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 ### Example: PR Review Comment Trigger
@@ -354,15 +359,15 @@ jobs:
   ai-automation:
     # Only run when a specific command is mentioned
     if: contains(github.event.comment.body, '/ai-review')
-    uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
-    with:
-      provider: codex
-      workflow_repository: docspec-ai/github-ai-actions
-      prompt_template: |
-        Address review comments on PR #{{PR_NUMBER}}: {{PR_DIFF}}
-      openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI automation
+        uses: docspec-ai/github-ai-actions@main
+        with:
+          provider: codex
+          prompt_template: |
+            Address review comments on PR #{{PR_NUMBER}}: {{PR_DIFF}}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 See the `examples/` directory for more trigger examples.
@@ -455,33 +460,6 @@ with:
 
 See the [Claude Code Action documentation](https://github.com/anthropics/claude-code-action) and [Codex Action documentation](https://github.com/openai/codex-action) for cloud provider setup details.
 
-## Troubleshooting
-
-### Workflow Not Triggering
-
-- Ensure the PR is actually merged (check `merged == true` condition)
-- Verify the workflow file is in `.github/workflows/` directory
-- Check that the reusable workflow path is correct
-
-### No PR Created
-
-- AI may not have made any changes
-- Check the workflow logs for errors
-- Verify branch creation succeeded
-- For Codex, ensure changes were actually made to files
-
-### Variable Not Substituting
-
-- Ensure variable names match exactly (case-sensitive)
-- Use double curly braces: `{{PR_NUMBER}}` not `{PR_NUMBER}`
-- Check that the PR data was fetched successfully
-
-### Codex Safety Strategy Issues
-
-- On Windows runners, you must use `safety_strategy: unsafe`
-- If you need `sudo` after Codex runs, consider splitting into separate jobs
-- See [Codex Action documentation](https://github.com/openai/codex-action) for security best practices
-
 ## License
 
-This workflow is provided as-is. See the main repository license for details.
+This action is provided as-is. See the main repository license for details.
