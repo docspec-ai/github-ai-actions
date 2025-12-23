@@ -9,7 +9,7 @@ jobs:
     # Only run on PR comments (not regular issues)
     # You can customize this condition based on your needs
     if: |
-      github.event.issue.pull_request != null ||
+      github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '/ai-process')
     uses: docspec-ai/github-ai-actions/.github/workflows/pr-automation.yml@main
     with:
