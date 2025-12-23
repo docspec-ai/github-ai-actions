@@ -99,13 +99,16 @@ type PullRequestQueryResponse = {
 
 function createOctokit(token: string) {
   const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
+  // For GitHub Enterprise Server, replace /api/v3 with /api to get the correct GraphQL endpoint
+  // For GitHub.com, the URL doesn't contain /api/v3, so it remains unchanged
+  const graphqlBaseUrl = apiUrl.replace("/api/v3", "/api");
   return {
     rest: new Octokit({
       auth: token,
       baseUrl: apiUrl,
     }),
     graphql: graphql.defaults({
-      baseUrl: apiUrl.replace("/api/v3", ""),
+      baseUrl: graphqlBaseUrl,
       headers: {
         authorization: `token ${token}`,
       },
