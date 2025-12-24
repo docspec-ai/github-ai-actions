@@ -6,22 +6,7 @@
 
 import * as core from "@actions/core";
 import { Octokit } from "@octokit/rest";
-
-/**
- * Substitutes variables in a template string
- */
-function substituteVariables(
-  template: string,
-  variables: Record<string, string>,
-): string {
-  let result = template;
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-    // Use function replacement to prevent interpretation of special dollar-sign patterns
-    result = result.replace(regex, () => value);
-  }
-  return result;
-}
+import { substituteVariables, parseRepository, getApiUrl } from "./utils.ts";
 
 /**
  * Checks if there are any changes between two branches using GitHub API
@@ -68,12 +53,7 @@ async function main() {
       throw new Error("REPOSITORY environment variable is required");
     }
 
-    const [owner, repo] = repository.split("/");
-    if (!owner || !repo) {
-      throw new Error(
-        `Invalid REPOSITORY format: ${repository}. Expected 'owner/repo'`,
-      );
-    }
+    const { owner, repo } = parseRepository(repository);
 
     const baseBranch = process.env.BASE_BRANCH || "main";
     const prTitleTemplate =
@@ -89,10 +69,9 @@ async function main() {
     const prBody = process.env.PR_BODY || "";
 
     // Create Octokit client
-    const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
     const octokit = new Octokit({
       auth: githubToken,
-      baseUrl: apiUrl,
+      baseUrl: getApiUrl(),
     });
 
     // Check if there are any changes

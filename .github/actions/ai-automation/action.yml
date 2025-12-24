@@ -72,6 +72,17 @@ inputs:
   github_token:
     description: "GitHub API token (pass ${{ secrets.GITHUB_TOKEN }})"
     required: true
+  # Plan phase inputs
+  enable_plan:
+    description: "Enable plan phase before implementation (runs LLM twice: once for planning, once for implementation)"
+    required: false
+    default: "false"
+  plan_prompt_template:
+    description: "Optional prompt template for the plan phase. If not provided, uses a default plan prompt."
+    required: false
+  plan_model:
+    description: "Optional model to use for plan phase (overrides default model)"
+    required: false
 outputs:
   branch_name:
     description: "Name of the branch created by the AI assistant"
@@ -97,54 +108,60 @@ runs:
       working-directory: ${{ github.action_path }}
       run: bun install
 
+    - name: Install Claude Code CLI
+      if: inputs.provider == 'claude'
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
     - name: Extract PR number from event
       id: extract-pr-number
       shell: bash
-      run: |
-        # If pr_number is explicitly provided, use it
-        if [ -n "${{ inputs.pr_number }}" ] && [ "${{ inputs.pr_number }}" != "" ]; then
-          echo "pr_number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
-          echo "Using explicitly provided PR number: ${{ inputs.pr_number }}"
-          exit 0
-        fi
+      working-directory: ${{ github.action_path }}
+      run: bun run scripts/extract-pr-number.ts
+      env:
+        PR_NUMBER: ${{ inputs.pr_number }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+        GITHUB_API_URL: ${{ github.api_url }}
 
-        # Try to extract from different event types
-        # PR events (pull_request, pull_request_target)
-        if [ -n "${{ github.event.pull_request.number }}" ] && [ "${{ github.event.pull_request.number }}" != "" ]; then
-          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "Extracted PR number from pull_request event: ${{ github.event.pull_request.number }}"
-          exit 0
-        fi
+    - name: Prepare plan prompt with PR data
+      id: prepare-plan-prompt
+      if: inputs.enable_plan == 'true'
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: bun run scripts/prepare-prompt.ts
+      env:
+        PROMPT_TEMPLATE: ${{ inputs.plan_prompt_template || 'Create a detailed plan for the following task. Analyze the requirements and break down the work into clear, actionable steps.' }}
+        PR_NUMBER: ${{ steps.extract-pr-number.outputs.pr_number }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        REPOSITORY: ${{ github.repository }}
+        BASE_BRANCH: ${{ inputs.base_branch || '' }}
 
-        # Issue comment events (could be on a PR)
-        if [ -n "${{ github.event.issue.number }}" ] && [ "${{ github.event.issue.number }}" != "" ]; then
-          # Check if the issue is actually a PR by querying the GitHub API
-          ISSUE_NUMBER="${{ github.event.issue.number }}"
-          API_RESPONSE=$(curl -s -f -H "Authorization: token ${{ inputs.github_token }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${GITHUB_API_URL}/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}" || echo "")
-          
-          if [ -n "$API_RESPONSE" ]; then
-            # Extract PR number from the response (if it's a PR, pull_request.url will be present)
-            PR_NUMBER=$(echo "$API_RESPONSE" | jq -r 'if .pull_request and .pull_request.url then (.pull_request.url | split("/") | last) else empty end' 2>/dev/null || echo "")
-            
-            if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ] && [ "$PR_NUMBER" != "" ]; then
-              echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-              echo "Extracted PR number from issue comment: $PR_NUMBER"
-              exit 0
-            else
-              echo "Issue #${ISSUE_NUMBER} is not a pull request" >&2
-            fi
-          else
-            echo "Failed to fetch issue #${ISSUE_NUMBER} from API" >&2
-          fi
-        fi
-
-        # If we get here, we couldn't extract a PR number
-        echo "Error: Could not extract PR number from event context" >&2
-        echo "Event name: ${{ github.event_name }}" >&2
-        echo "Please provide pr_number input explicitly, or trigger from a PR-related event" >&2
-        exit 1
+    - name: Run plan phase
+      id: plan-phase
+      if: inputs.enable_plan == 'true'
+      shell: bash
+      run: cd ${{ github.action_path }} && bun run scripts/run-llm.ts
+      env:
+        PROVIDER: ${{ inputs.provider }}
+        PROMPT: ${{ steps.prepare-plan-prompt.outputs.final_prompt }}
+        PERMISSION_MODE: ""
+        CAPTURE_OUTPUT: "true"
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        USE_BEDROCK: ${{ inputs.use_bedrock }}
+        USE_VERTEX: ${{ inputs.use_vertex }}
+        USE_FOUNDRY: ${{ inputs.use_foundry }}
+        CLAUDE_ARGS: ${{ inputs.claude_args }}
+        MODEL: ${{ inputs.plan_model }}
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        RESPONSES_API_ENDPOINT: ${{ inputs.responses_api_endpoint }}
+        CODEX_ARGS: ${{ inputs.codex_args }}
+        CODEX_SANDBOX: "read-only"
+        CODEX_SAFETY_STRATEGY: "read-only"
 
     - name: Prepare prompt with PR data
       id: prepare-prompt
@@ -157,40 +174,50 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         REPOSITORY: ${{ github.repository }}
         BASE_BRANCH: ${{ inputs.base_branch || '' }}
+        PLAN: ${{ steps.plan-phase.outputs.output }}
 
-    # Claude Code execution
+    # Create branch for AI execution
+    - name: Create branch
+      id: create-branch
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: bun run scripts/create-branch.ts
+      env:
+        BASE_BRANCH: ${{ steps.prepare-prompt.outputs.base_branch }}
+        BRANCH_PREFIX: ${{ inputs.branch_prefix }}
+        PR_NUMBER: ${{ steps.prepare-prompt.outputs.pr_number }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
+    # Claude Code execution using shared script
     - name: Run Claude Code
       id: claude-code
       if: inputs.provider == 'claude'
-      uses: anthropics/claude-code-action@v1
-      with:
-        prompt: ${{ steps.prepare-prompt.outputs.final_prompt }}
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
-        use_bedrock: ${{ inputs.use_bedrock }}
-        use_vertex: ${{ inputs.use_vertex }}
-        use_foundry: ${{ inputs.use_foundry }}
-        base_branch: ${{ steps.prepare-prompt.outputs.base_branch }}
-        branch_prefix: ${{ inputs.branch_prefix }}
-        claude_args: ${{ inputs.claude_args }}
+      shell: bash
+      run: cd ${{ github.action_path }} && bun run scripts/run-llm.ts
+      env:
+        PROVIDER: "claude"
+        PROMPT: ${{ steps.prepare-prompt.outputs.final_prompt }}
+        PERMISSION_MODE: "acceptEdits"
+        CAPTURE_OUTPUT: "false"
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        USE_BEDROCK: ${{ inputs.use_bedrock }}
+        USE_VERTEX: ${{ inputs.use_vertex }}
+        USE_FOUNDRY: ${{ inputs.use_foundry }}
+        CLAUDE_ARGS: ${{ inputs.claude_args }}
+
+    - name: Commit and push changes
+      id: commit-push
+      if: inputs.provider == 'claude'
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: bun run scripts/commit-and-push.ts
+      env:
+        BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        PR_NUMBER: ${{ steps.prepare-prompt.outputs.pr_number }}
+        PROVIDER: "claude"
 
     # Codex execution
-    - name: Create branch for Codex
-      id: codex-branch
-      if: inputs.provider == 'codex'
-      shell: bash
-      run: |
-        BASE_BRANCH="${{ steps.prepare-prompt.outputs.base_branch }}"
-        BRANCH_PREFIX="${{ inputs.branch_prefix }}"
-        PR_NUMBER="${{ steps.prepare-prompt.outputs.pr_number }}"
-        BRANCH_NAME="${BRANCH_PREFIX}pr-${PR_NUMBER}-$(date +%s)"
-
-        git fetch origin "$BASE_BRANCH"
-        git checkout -b "$BRANCH_NAME" "origin/$BASE_BRANCH" || git checkout -b "$BRANCH_NAME"
-        echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-
     - name: Run Codex
       id: codex-exec
       if: inputs.provider == 'codex'
@@ -203,46 +230,27 @@ runs:
         safety-strategy: ${{ inputs.codex_safety_strategy }}
         codex-args: ${{ inputs.codex_args }}
 
-    - name: Commit and push Codex changes
-      id: codex-commit
+    - name: Commit and push changes
+      id: commit-push
       if: inputs.provider == 'codex'
       shell: bash
-      run: |
-        BRANCH_NAME="${{ steps.codex-branch.outputs.branch_name }}"
-
-        # Check if there are any changes
-        if [ -n "$(git status --porcelain)" ]; then
-          git config user.name "github-ai-actions[bot]"
-          git config user.email "github-ai-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "chore: Automated changes from Codex for PR #${{ steps.prepare-prompt.outputs.pr_number }}"
-          git push origin "$BRANCH_NAME"
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-        else
-          echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "No changes detected, skipping PR creation"
-        fi
+      working-directory: ${{ github.action_path }}
+      run: bun run scripts/commit-and-push.ts
+      env:
+        BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        PR_NUMBER: ${{ steps.prepare-prompt.outputs.pr_number }}
+        PROVIDER: "codex"
 
     # Set unified outputs
     - name: Set AI execution outputs
       id: ai-execution
       shell: bash
       run: |
-        if [ "${{ inputs.provider }}" == "claude" ]; then
-          if [ -n "${{ steps.claude-code.outputs.branch_name }}" ]; then
-            echo "branch_name=${{ steps.claude-code.outputs.branch_name }}" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-        elif [ "${{ inputs.provider }}" == "codex" ]; then
-          if [ "${{ steps.codex-commit.outputs.has_changes }}" == "true" ]; then
-            echo "branch_name=${{ steps.codex-commit.outputs.branch_name }}" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
+        if [ "${{ steps.commit-push.outputs.has_changes }}" == "true" ]; then
+          echo "branch_name=${{ steps.commit-push.outputs.branch_name }}" >> $GITHUB_OUTPUT
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Create PR if changes exist

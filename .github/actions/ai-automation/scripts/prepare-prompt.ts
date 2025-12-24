@@ -9,6 +9,7 @@ import * as core from "@actions/core";
 import { Octokit } from "@octokit/rest";
 import { graphql } from "@octokit/graphql";
 import { execFileSync } from "child_process";
+import { substituteVariables, parseRepository, getApiUrl } from "./utils.ts";
 
 // GraphQL query for PR data
 const PR_QUERY = `
@@ -98,7 +99,7 @@ type PullRequestQueryResponse = {
 };
 
 function createOctokit(token: string) {
-  const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
+  const apiUrl = getApiUrl();
   // For GitHub Enterprise Server, replace /api/v3 with /api to get the correct GraphQL endpoint
   // For GitHub.com, the URL doesn't contain /api/v3, so it remains unchanged
   const graphqlBaseUrl = apiUrl.replace("/api/v3", "/api");
@@ -128,14 +129,6 @@ interface PRData {
   diff: string;
 }
 
-/**
- * Escapes special characters in a string to prevent injection
- */
-function escapeVariable(value: string): string {
-  // For prompt templates, we just return as-is since they're user-controlled
-  // But we'll ensure newlines are preserved
-  return value;
-}
 
 /**
  * Fetches PR data using GitHub GraphQL API
@@ -196,33 +189,35 @@ async function fetchPRData(
 /**
  * Substitutes variables in the prompt template
  */
-function substituteVariables(template: string, data: PRData): string {
-  let result = template;
+function substitutePromptVariables(template: string, data: PRData): string {
+  const variables: Record<string, string> = {
+    PR_DIFF: data.diff,
+    PR_TITLE: data.title,
+    PR_NUMBER: String(data.number),
+    PR_AUTHOR: data.author,
+    PR_BODY: data.body,
+    CHANGED_FILES: data.changedFiles.join("\n"),
+    REPOSITORY: process.env.REPOSITORY || "",
+    BASE_BRANCH: data.baseBranch,
+  };
 
-  // Replace all variable placeholders
-  // Use function replacement to prevent interpretation of special dollar-sign patterns
-  result = result.replace(/\{\{PR_DIFF\}\}/g, () => escapeVariable(data.diff));
-  result = result.replace(/\{\{PR_TITLE\}\}/g, () =>
-    escapeVariable(data.title),
-  );
-  result = result.replace(/\{\{PR_NUMBER\}\}/g, () =>
-    escapeVariable(String(data.number)),
-  );
-  result = result.replace(/\{\{PR_AUTHOR\}\}/g, () =>
-    escapeVariable(data.author),
-  );
-  result = result.replace(/\{\{PR_BODY\}\}/g, () => escapeVariable(data.body));
-  result = result.replace(/\{\{CHANGED_FILES\}\}/g, () =>
-    escapeVariable(data.changedFiles.join("\n")),
-  );
-  result = result.replace(/\{\{REPOSITORY\}\}/g, () =>
-    escapeVariable(process.env.REPOSITORY || ""),
-  );
-  result = result.replace(/\{\{BASE_BRANCH\}\}/g, () =>
-    escapeVariable(data.baseBranch),
-  );
+  return substituteVariables(template, variables);
+}
 
-  return result;
+/**
+ * Embeds plan into implementation prompt template
+ */
+function embedPlan(prompt: string, plan: string): string {
+  if (!plan || plan.trim().length === 0) {
+    return prompt;
+  }
+
+  return `Based on this plan:
+<plan>
+${plan}
+</plan>
+
+${prompt}`;
 }
 
 async function main() {
@@ -249,12 +244,7 @@ async function main() {
       throw new Error("REPOSITORY environment variable is required");
     }
 
-    const [owner, repo] = repository.split("/");
-    if (!owner || !repo) {
-      throw new Error(
-        `Invalid REPOSITORY format: ${repository}. Expected 'owner/repo'`,
-      );
-    }
+    const { owner, repo } = parseRepository(repository);
 
     // Determine base branch
     let baseBranch = process.env.BASE_BRANCH || "";
@@ -270,7 +260,13 @@ async function main() {
     const prData = await fetchPRData(octokit, owner, repo, prNumber);
 
     // Substitute variables in prompt
-    const finalPrompt = substituteVariables(promptTemplate, prData);
+    let finalPrompt = substitutePromptVariables(promptTemplate, prData);
+
+    // Embed plan if provided
+    const plan = process.env.PLAN;
+    if (plan) {
+      finalPrompt = embedPlan(finalPrompt, plan);
+    }
 
     // Set outputs
     core.setOutput("final_prompt", finalPrompt);
@@ -283,6 +279,9 @@ async function main() {
     console.log("Prompt prepared successfully");
     console.log(`Base branch: ${baseBranch}`);
     console.log(`PR #${prData.number}: ${prData.title}`);
+    if (plan) {
+      console.log("Plan embedded in implementation prompt");
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     core.setFailed(`Failed to prepare prompt: ${errorMessage}`);
