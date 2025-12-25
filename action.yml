@@ -72,6 +72,17 @@ inputs:
   github_token:
     description: "GitHub API token (pass ${{ secrets.GITHUB_TOKEN }} from your workflow)"
     required: true
+  # Plan phase inputs
+  enable_plan:
+    description: "Enable plan phase before implementation (runs LLM twice: once for planning, once for implementation)"
+    required: false
+    default: "false"
+  plan_prompt_template:
+    description: "Optional prompt template for the plan phase. If not provided, uses a default plan prompt."
+    required: false
+  plan_model:
+    description: "Optional model to use for plan phase (overrides default model)"
+    required: false
 outputs:
   branch_name:
     description: "Name of the branch created by the AI assistant"
@@ -105,3 +116,6 @@ runs:
         pr_body_template: ${{ inputs.pr_body_template }}
         base_branch: ${{ inputs.base_branch }}
         github_token: ${{ inputs.github_token }}
+        enable_plan: ${{ inputs.enable_plan }}
+        plan_prompt_template: ${{ inputs.plan_prompt_template }}
+        plan_model: ${{ inputs.plan_model }}
