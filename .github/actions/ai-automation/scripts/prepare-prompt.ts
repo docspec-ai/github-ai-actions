@@ -158,14 +158,18 @@ async function fetchPRData(
     const baseRef = pr.baseRefName;
     const headRef = pr.headRefOid;
 
+    // Determine working directory (repository root, not action path)
+    const repoRoot = process.env.GITHUB_WORKSPACE || process.cwd();
+
     // Fetch the base branch (the commit SHA is already available due to fetch-depth: 0)
     execFileSync("git", ["fetch", "origin", baseRef], {
       stdio: "pipe",
+      cwd: repoRoot,
     });
     const diffOutput = execFileSync(
       "git",
       ["diff", `origin/${baseRef}`, headRef],
-      { encoding: "utf-8" },
+      { encoding: "utf-8", cwd: repoRoot },
     );
     diff = diffOutput;
   } catch (error) {
