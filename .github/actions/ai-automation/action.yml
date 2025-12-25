@@ -220,7 +220,7 @@ Analyze the requirements and break down the work into clear, actionable steps. C
         CLAUDE_ARGS: ${{ inputs.claude_args }}
 
     - name: Commit and push changes
-      id: commit-push
+      id: commit-push-claude
       if: inputs.provider == 'claude'
       shell: bash
       working-directory: ${{ github.action_path }}
@@ -244,7 +244,7 @@ Analyze the requirements and break down the work into clear, actionable steps. C
         codex-args: ${{ inputs.codex_args }}
 
     - name: Commit and push changes
-      id: commit-push
+      id: commit-push-codex
       if: inputs.provider == 'codex'
       shell: bash
       working-directory: ${{ github.action_path }}
@@ -259,8 +259,13 @@ Analyze the requirements and break down the work into clear, actionable steps. C
       id: ai-execution
       shell: bash
       run: |
-        if [ "${{ steps.commit-push.outputs.has_changes }}" == "true" ]; then
-          echo "branch_name=${{ steps.commit-push.outputs.branch_name }}" >> $GITHUB_OUTPUT
+        # Check Claude outputs if provider is claude
+        if [ "${{ inputs.provider }}" == "claude" ] && [ "${{ steps.commit-push-claude.outputs.has_changes }}" == "true" ]; then
+          echo "branch_name=${{ steps.commit-push-claude.outputs.branch_name }}" >> $GITHUB_OUTPUT
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        # Check Codex outputs if provider is codex
+        elif [ "${{ inputs.provider }}" == "codex" ] && [ "${{ steps.commit-push-codex.outputs.has_changes }}" == "true" ]; then
+          echo "branch_name=${{ steps.commit-push-codex.outputs.branch_name }}" >> $GITHUB_OUTPUT
           echo "has_changes=true" >> $GITHUB_OUTPUT
         else
           echo "has_changes=false" >> $GITHUB_OUTPUT
