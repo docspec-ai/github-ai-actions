@@ -132,6 +132,26 @@ runs:
         GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
         GITHUB_API_URL: ${{ github.api_url }}
 
+    - name: Set default plan prompt template
+      id: set-plan-prompt-default
+      if: inputs.enable_plan == 'true'
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.plan_prompt_template }}" ]; then
+          DEFAULT_PLAN_PROMPT='Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}
+
+PR Description:
+{{PR_BODY}}
+
+Changed Files:
+{{CHANGED_FILES}}
+
+Analyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.'
+          echo "plan_prompt_template=$DEFAULT_PLAN_PROMPT" >> $GITHUB_OUTPUT
+        else
+          echo "plan_prompt_template=${{ inputs.plan_prompt_template }}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Prepare plan prompt with PR data
       id: prepare-plan-prompt
       if: inputs.enable_plan == 'true'
@@ -139,7 +159,7 @@ runs:
       working-directory: ${{ github.action_path }}
       run: bun run scripts/prepare-prompt.ts
       env:
-        PROMPT_TEMPLATE: ${{ inputs.plan_prompt_template || 'Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}\n\nPR Description:\n{{PR_BODY}}\n\nChanged Files:\n{{CHANGED_FILES}}\n\nAnalyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.' }}
+        PROMPT_TEMPLATE: ${{ steps.set-plan-prompt-default.outputs.plan_prompt_template }}
         PR_NUMBER: ${{ steps.extract-pr-number.outputs.pr_number }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         REPOSITORY: ${{ github.repository }}
