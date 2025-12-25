@@ -95,7 +95,7 @@ runs:
   steps:
     - name: Run AI automation
       id: delegate
-      uses: ./.github/actions/ai-automation
+      uses: docspec-ai/github-ai-actions/.github/actions/ai-automation@main
       with:
         provider: ${{ inputs.provider }}
         prompt_template: ${{ inputs.prompt_template }}
