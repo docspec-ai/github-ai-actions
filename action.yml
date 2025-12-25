@@ -70,7 +70,7 @@ inputs:
     description: "Base branch to create new branch from (defaults to repository default branch)"
     required: false
   github_token:
-    description: "GitHub API token (pass ${{ secrets.GITHUB_TOKEN }} from your workflow)"
+    description: "GitHub API token (pass secrets.GITHUB_TOKEN from your workflow)"
     required: true
   # Plan phase inputs
   enable_plan:
