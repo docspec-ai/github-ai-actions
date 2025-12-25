@@ -183,6 +183,14 @@ function runCodex(config: RunLLMConfig): RunLLMResult {
     // Build command
     const cmd: string[] = ["codex", "exec"];
 
+    // Add sandbox and safety strategy flags if provided
+    if (config.codexSandbox) {
+      cmd.push("--sandbox", config.codexSandbox);
+    }
+    if (config.codexSafetyStrategy) {
+      cmd.push("--safety-strategy", config.codexSafetyStrategy);
+    }
+
     // Parse codex-args if provided
     if (config.codexArgs) {
       try {
