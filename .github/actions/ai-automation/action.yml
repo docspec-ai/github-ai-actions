@@ -138,18 +138,25 @@ runs:
       shell: bash
       run: |
         if [ -z "${{ inputs.plan_prompt_template }}" ]; then
-          DEFAULT_PLAN_PROMPT='Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}
-
-PR Description:
-{{PR_BODY}}
-
-Changed Files:
-{{CHANGED_FILES}}
-
-Analyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.'
-          echo "plan_prompt_template=$DEFAULT_PLAN_PROMPT" >> $GITHUB_OUTPUT
+          {
+            echo 'plan_prompt_template<<EOF'
+            echo 'Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}'
+            echo ''
+            echo 'PR Description:'
+            echo '{{PR_BODY}}'
+            echo ''
+            echo 'Changed Files:'
+            echo '{{CHANGED_FILES}}'
+            echo ''
+            echo 'Analyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.'
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
         else
-          echo "plan_prompt_template=${{ inputs.plan_prompt_template }}" >> $GITHUB_OUTPUT
+          {
+            echo 'plan_prompt_template<<EOF'
+            echo "${{ inputs.plan_prompt_template }}"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
         fi
 
     - name: Prepare plan prompt with PR data
