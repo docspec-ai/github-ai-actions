@@ -1,0 +1,61 @@
+name: Manual Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to test with"
+        required: true
+        type: string
+      provider:
+        description: "AI provider (claude or codex)"
+        required: false
+        type: choice
+        options:
+          - claude
+          - codex
+        default: claude
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run AI automation
+        uses: ./
+        with:
+          provider: ${{ inputs.provider || 'claude' }}
+          pr_number: ${{ inputs.pr_number }}
+          prompt_template: |
+            This is a test of the AI automation action.
+            
+            PR #{{PR_NUMBER}}: {{PR_TITLE}}
+            Author: {{PR_AUTHOR}}
+            
+            Please create a simple test file called `test-output-{{PR_NUMBER}}.txt` 
+            with the following content:
+            
+            "This file was created by AI automation for PR #{{PR_NUMBER}}"
+            "Original PR title: {{PR_TITLE}}"
+            "Author: {{PR_AUTHOR}}"
+            
+            This is just a test - no need to make complex changes.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch_prefix: "test/"
+          pr_title_template: "test: AI automation test for PR #{{PR_NUMBER}}"
+          pr_body_template: |
+            This is a manual test of the AI automation action.
+            
+            **Test PR**: #{{PR_NUMBER}} - {{PR_TITLE}}
+            **Author**: @{{PR_AUTHOR}}
+            
+            This PR was created automatically for testing purposes.
+
