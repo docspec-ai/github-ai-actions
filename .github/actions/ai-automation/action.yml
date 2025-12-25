@@ -70,7 +70,7 @@ inputs:
     description: "Base branch to create new branch from (defaults to repository default branch)"
     required: false
   github_token:
-    description: "GitHub API token (pass ${{ secrets.GITHUB_TOKEN }})"
+    description: "GitHub API token (pass secrets.GITHUB_TOKEN from your workflow)"
     required: true
   # Plan phase inputs
   enable_plan:
@@ -139,15 +139,7 @@ runs:
       working-directory: ${{ github.action_path }}
       run: bun run scripts/prepare-prompt.ts
       env:
-        PROMPT_TEMPLATE: ${{ inputs.plan_prompt_template || 'Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}
-
-PR Description:
-{{PR_BODY}}
-
-Changed Files:
-{{CHANGED_FILES}}
-
-Analyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.' }}
+        PROMPT_TEMPLATE: ${{ inputs.plan_prompt_template || 'Create a detailed plan for implementing the changes described in PR #{{PR_NUMBER}}: {{PR_TITLE}}\n\nPR Description:\n{{PR_BODY}}\n\nChanged Files:\n{{CHANGED_FILES}}\n\nAnalyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.' }}
         PR_NUMBER: ${{ steps.extract-pr-number.outputs.pr_number }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
         REPOSITORY: ${{ github.repository }}
