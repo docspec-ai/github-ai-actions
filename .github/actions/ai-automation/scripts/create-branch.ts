@@ -20,6 +20,9 @@ function main() {
       throw new Error("PR_NUMBER environment variable is required");
     }
 
+    // Determine working directory (repository root, not action path)
+    const repoRoot = process.env.GITHUB_WORKSPACE || process.cwd();
+
     // Generate branch name: {prefix}pr-{number}-{timestamp}
     const timestamp = Date.now();
     const branchName = `${branchPrefix}pr-${prNumber}-${timestamp}`;
@@ -28,6 +31,7 @@ function main() {
     try {
       execFileSync("git", ["fetch", "origin", baseBranch], {
         stdio: "pipe",
+        cwd: repoRoot,
       });
     } catch (error) {
       console.warn(
@@ -39,6 +43,7 @@ function main() {
     try {
       execFileSync("git", ["checkout", "-b", branchName, `origin/${baseBranch}`], {
         stdio: "pipe",
+        cwd: repoRoot,
       });
     } catch (error) {
       // If origin/branch doesn't exist, try creating from current branch
@@ -47,6 +52,7 @@ function main() {
       );
       execFileSync("git", ["checkout", "-b", branchName], {
         stdio: "pipe",
+        cwd: repoRoot,
       });
     }
 

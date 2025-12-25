@@ -17,11 +17,15 @@ function main() {
     const prNumber = process.env.PR_NUMBER || "unknown";
     const provider = process.env.PROVIDER || "ai";
 
+    // Determine working directory (repository root, not action path)
+    const repoRoot = process.env.GITHUB_WORKSPACE || process.cwd();
+
     // Check if there are any changes
     let hasChanges = false;
     try {
       const statusOutput = execFileSync("git", ["status", "--porcelain"], {
         encoding: "utf-8",
+        cwd: repoRoot,
       });
       hasChanges = statusOutput.trim().length > 0;
     } catch (error) {
@@ -40,29 +44,34 @@ function main() {
     // Configure git user
     execFileSync("git", ["config", "user.name", "github-ai-actions[bot]"], {
       stdio: "pipe",
+      cwd: repoRoot,
     });
     execFileSync(
       "git",
       ["config", "user.email", "github-ai-actions[bot]@users.noreply.github.com"],
       {
         stdio: "pipe",
+        cwd: repoRoot,
       },
     );
 
     // Stage all changes
     execFileSync("git", ["add", "-A"], {
       stdio: "pipe",
+      cwd: repoRoot,
     });
 
     // Commit changes
     const commitMessage = `chore: Automated changes from ${provider} for PR #${prNumber}`;
     execFileSync("git", ["commit", "-m", commitMessage], {
       stdio: "pipe",
+      cwd: repoRoot,
     });
 
     // Push to remote
     execFileSync("git", ["push", "origin", branchName], {
       stdio: "pipe",
+      cwd: repoRoot,
     });
 
     console.log(`Committed and pushed changes to ${branchName}`);
