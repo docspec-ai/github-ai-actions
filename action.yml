@@ -11,27 +11,57 @@ inputs:
   pr_number:
     description: "PR number to process. If not provided, will be extracted from the GitHub event context."
     required: false
-  # Claude-specific inputs
+  # Claude-specific inputs (matching anthropics/claude-code-action/base-action)
   anthropic_api_key:
-    description: "Anthropic API key for Claude Code"
+    description: "Anthropic API key (required for direct Anthropic API)"
     required: false
+    default: ""
   claude_code_oauth_token:
     description: "Claude Code OAuth token (alternative to anthropic_api_key)"
     required: false
+    default: ""
   use_bedrock:
-    description: "Use Amazon Bedrock instead of direct Anthropic API"
+    description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   use_vertex:
-    description: "Use Google Vertex AI instead of direct Anthropic API"
+    description: "Use Google Vertex AI with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   use_foundry:
-    description: "Use Microsoft Foundry instead of direct Anthropic API"
+    description: "Use Microsoft Foundry with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   claude_args:
-    description: "Additional arguments to pass to Claude Code CLI"
+    description: "Additional arguments to pass directly to Claude CLI (e.g., '--max-turns 3 --mcp-config /path/to/config.json')"
+    required: false
+    default: ""
+  settings:
+    description: "Claude Code settings as JSON string or path to settings JSON file"
+    required: false
+    default: ""
+  use_node_cache:
+    description: "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
+    required: false
+    default: "false"
+  path_to_claude_code_executable:
+    description: "Optional path to a custom Claude Code executable. If provided, skips automatic installation and uses this executable instead."
+    required: false
+    default: ""
+  path_to_bun_executable:
+    description: "Optional path to a custom Bun executable. If provided, skips automatic Bun installation and uses this executable instead."
+    required: false
+    default: ""
+  show_full_output:
+    description: "Show full JSON output from Claude Code. WARNING: This outputs ALL Claude messages including tool execution results which may contain secrets, API keys, or other sensitive information."
+    required: false
+    default: "false"
+  plugins:
+    description: "Newline-separated list of Claude Code plugin names to install (e.g., 'code-review@claude-code-plugins\nfeature-dev@claude-code-plugins')"
+    required: false
+    default: ""
+  plugin_marketplaces:
+    description: "Newline-separated list of Claude Code plugin marketplace Git URLs to install from"
     required: false
     default: ""
   # Codex-specific inputs
@@ -80,9 +110,10 @@ inputs:
   plan_prompt_template:
     description: "Optional prompt template for the plan phase. If not provided, uses a default plan prompt."
     required: false
-  plan_model:
-    description: "Optional model to use for plan phase (overrides default model)"
+  plan_claude_args:
+    description: "Additional arguments to pass directly to Claude CLI for plan phase (e.g., '--model claude-opus-4-1-20250805 --max-turns 3')"
     required: false
+    default: ""
 outputs:
   branch_name:
     description: "Name of the branch created by the AI assistant"
@@ -106,6 +137,13 @@ runs:
         use_vertex: ${{ inputs.use_vertex }}
         use_foundry: ${{ inputs.use_foundry }}
         claude_args: ${{ inputs.claude_args }}
+        settings: ${{ inputs.settings }}
+        use_node_cache: ${{ inputs.use_node_cache }}
+        path_to_claude_code_executable: ${{ inputs.path_to_claude_code_executable }}
+        path_to_bun_executable: ${{ inputs.path_to_bun_executable }}
+        show_full_output: ${{ inputs.show_full_output }}
+        plugins: ${{ inputs.plugins }}
+        plugin_marketplaces: ${{ inputs.plugin_marketplaces }}
         openai_api_key: ${{ inputs.openai_api_key }}
         responses_api_endpoint: ${{ inputs.responses_api_endpoint }}
         codex_args: ${{ inputs.codex_args }}
@@ -118,4 +156,4 @@ runs:
         github_token: ${{ inputs.github_token }}
         enable_plan: ${{ inputs.enable_plan }}
         plan_prompt_template: ${{ inputs.plan_prompt_template }}
-        plan_model: ${{ inputs.plan_model }}
+        plan_claude_args: ${{ inputs.plan_claude_args }}
