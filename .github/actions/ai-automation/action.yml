@@ -249,7 +249,6 @@ runs:
         echo "EOF" >> $GITHUB_OUTPUT
       env:
         PLAN_FILE: ${{ steps.set-plan-prompt-default.outputs.plan_file }}
-        EXECUTION_FILE: ${{ steps.plan-phase-claude.outputs.execution_file }}
 
     - name: Extract plan from file (Codex)
       id: extract-plan-codex
