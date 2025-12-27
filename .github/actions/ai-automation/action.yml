@@ -11,27 +11,57 @@ inputs:
   pr_number:
     description: "PR number to process. If not provided, will be extracted from the GitHub event context."
     required: false
-  # Claude-specific inputs
+  # Claude-specific inputs (matching anthropics/claude-code-action/base-action)
   anthropic_api_key:
-    description: "Anthropic API key for Claude Code"
+    description: "Anthropic API key (required for direct Anthropic API)"
     required: false
+    default: ""
   claude_code_oauth_token:
     description: "Claude Code OAuth token (alternative to anthropic_api_key)"
     required: false
+    default: ""
   use_bedrock:
-    description: "Use Amazon Bedrock instead of direct Anthropic API"
+    description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   use_vertex:
-    description: "Use Google Vertex AI instead of direct Anthropic API"
+    description: "Use Google Vertex AI with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   use_foundry:
-    description: "Use Microsoft Foundry instead of direct Anthropic API"
+    description: "Use Microsoft Foundry with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   claude_args:
-    description: "Additional arguments to pass to Claude Code CLI"
+    description: "Additional arguments to pass directly to Claude CLI (e.g., '--max-turns 3 --mcp-config /path/to/config.json')"
+    required: false
+    default: ""
+  settings:
+    description: "Claude Code settings as JSON string or path to settings JSON file"
+    required: false
+    default: ""
+  use_node_cache:
+    description: "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
+    required: false
+    default: "false"
+  path_to_claude_code_executable:
+    description: "Optional path to a custom Claude Code executable. If provided, skips automatic installation and uses this executable instead."
+    required: false
+    default: ""
+  path_to_bun_executable:
+    description: "Optional path to a custom Bun executable. If provided, skips automatic Bun installation and uses this executable instead."
+    required: false
+    default: ""
+  show_full_output:
+    description: "Show full JSON output from Claude Code. WARNING: This outputs ALL Claude messages including tool execution results which may contain secrets, API keys, or other sensitive information."
+    required: false
+    default: "false"
+  plugins:
+    description: "Newline-separated list of Claude Code plugin names to install (e.g., 'code-review@claude-code-plugins\nfeature-dev@claude-code-plugins')"
+    required: false
+    default: ""
+  plugin_marketplaces:
+    description: "Newline-separated list of Claude Code plugin marketplace Git URLs to install from"
     required: false
     default: ""
   # Codex-specific inputs
@@ -80,9 +110,10 @@ inputs:
   plan_prompt_template:
     description: "Optional prompt template for the plan phase. If not provided, uses a default plan prompt."
     required: false
-  plan_model:
-    description: "Optional model to use for plan phase (overrides default model)"
+  plan_claude_args:
+    description: "Additional arguments to pass directly to Claude CLI for plan phase (e.g., '--model claude-opus-4-1-20250805 --max-turns 3')"
     required: false
+    default: ""
 outputs:
   branch_name:
     description: "Name of the branch created by the AI assistant"
@@ -108,11 +139,6 @@ runs:
       working-directory: ${{ github.action_path }}
       run: bun install
 
-    - name: Install Claude Code CLI
-      if: inputs.provider == 'claude'
-      shell: bash
-      run: npm install -g @anthropic-ai/claude-code
-
     - name: Install Codex CLI
       if: inputs.provider == 'codex' && inputs.enable_plan == 'true'
       shell: bash
@@ -137,6 +163,7 @@ runs:
       if: inputs.enable_plan == 'true'
       shell: bash
       run: |
+        PLAN_FILE="${{ runner.temp }}/plan.txt"
         if [ -z "${{ inputs.plan_prompt_template }}" ]; then
           {
             echo 'plan_prompt_template<<EOF'
@@ -149,15 +176,20 @@ runs:
             echo '{{CHANGED_FILES}}'
             echo ''
             echo 'Analyze the requirements and break down the work into clear, actionable steps. Consider the code changes needed, potential edge cases, and testing requirements.'
+            echo ''
+            echo "IMPORTANT: Write your plan to the file $PLAN_FILE (or use the RUNNER_TEMP environment variable: \$RUNNER_TEMP/plan.txt). Do not make any other changes to the codebase - only write the plan file."
             echo 'EOF'
           } >> $GITHUB_OUTPUT
         else
           {
             echo 'plan_prompt_template<<EOF'
             echo "${{ inputs.plan_prompt_template }}"
+            echo ''
+            echo "IMPORTANT: Write your plan to the file $PLAN_FILE (or use the RUNNER_TEMP environment variable: \$RUNNER_TEMP/plan.txt). Do not make any other changes to the codebase - only write the plan file."
             echo 'EOF'
           } >> $GITHUB_OUTPUT
         fi
+        echo "plan_file=$PLAN_FILE" >> $GITHUB_OUTPUT
 
     - name: Prepare plan prompt with PR data
       id: prepare-plan-prompt
@@ -172,28 +204,65 @@ runs:
         REPOSITORY: ${{ github.repository }}
         BASE_BRANCH: ${{ inputs.base_branch || '' }}
 
-    - name: Run plan phase
-      id: plan-phase
-      if: inputs.enable_plan == 'true'
+    - name: Run plan phase (Claude)
+      id: plan-phase-claude
+      if: inputs.enable_plan == 'true' && inputs.provider == 'claude'
+      uses: anthropics/claude-code-action/base-action@main
+      with:
+        prompt: ${{ steps.prepare-plan-prompt.outputs.final_prompt }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        use_bedrock: ${{ inputs.use_bedrock }}
+        use_vertex: ${{ inputs.use_vertex }}
+        use_foundry: ${{ inputs.use_foundry }}
+        claude_args: ${{ inputs.plan_claude_args || inputs.claude_args }}
+        settings: ${{ inputs.settings }}
+        use_node_cache: ${{ inputs.use_node_cache }}
+        path_to_claude_code_executable: ${{ inputs.path_to_claude_code_executable }}
+        path_to_bun_executable: ${{ inputs.path_to_bun_executable }}
+        show_full_output: ${{ inputs.show_full_output }}
+        plugins: ${{ inputs.plugins }}
+        plugin_marketplaces: ${{ inputs.plugin_marketplaces }}
+
+    - name: Run plan phase (Codex)
+      id: plan-phase-codex
+      if: inputs.enable_plan == 'true' && inputs.provider == 'codex'
+      uses: openai/codex-action@v1
+      with:
+        openai-api-key: ${{ inputs.openai_api_key }}
+        responses-api-endpoint: ${{ inputs.responses_api_endpoint }}
+        prompt: ${{ steps.prepare-plan-prompt.outputs.final_prompt }}
+        sandbox: read-only
+        safety-strategy: read-only
+        codex-args: ${{ inputs.codex_args }}
+        output-file: ${{ steps.set-plan-prompt-default.outputs.plan_file }}
+
+    - name: Extract plan from file (Claude)
+      id: extract-plan-claude
+      if: inputs.enable_plan == 'true' && inputs.provider == 'claude'
       shell: bash
-      run: cd ${{ github.action_path }} && bun run scripts/run-llm.ts
+      working-directory: ${{ github.action_path }}
+      run: |
+        PLAN=$(bun run scripts/extract-plan-from-file.ts)
+        echo "plan<<EOF" >> $GITHUB_OUTPUT
+        echo "$PLAN" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
       env:
-        PROVIDER: ${{ inputs.provider }}
-        PROMPT: ${{ steps.prepare-plan-prompt.outputs.final_prompt }}
-        PERMISSION_MODE: ""
-        CAPTURE_OUTPUT: "true"
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
-        USE_BEDROCK: ${{ inputs.use_bedrock }}
-        USE_VERTEX: ${{ inputs.use_vertex }}
-        USE_FOUNDRY: ${{ inputs.use_foundry }}
-        CLAUDE_ARGS: ${{ inputs.claude_args }}
-        MODEL: ${{ inputs.plan_model }}
-        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
-        RESPONSES_API_ENDPOINT: ${{ inputs.responses_api_endpoint }}
-        CODEX_ARGS: ${{ inputs.codex_args }}
-        CODEX_SANDBOX: "read-only"
-        CODEX_SAFETY_STRATEGY: "read-only"
+        PLAN_FILE: ${{ steps.set-plan-prompt-default.outputs.plan_file }}
+        EXECUTION_FILE: ${{ steps.plan-phase-claude.outputs.execution_file }}
+
+    - name: Extract plan from file (Codex)
+      id: extract-plan-codex
+      if: inputs.enable_plan == 'true' && inputs.provider == 'codex'
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        PLAN=$(bun run scripts/extract-plan-from-file.ts)
+        echo "plan<<EOF" >> $GITHUB_OUTPUT
+        echo "$PLAN" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      env:
+        PLAN_FILE: ${{ steps.set-plan-prompt-default.outputs.plan_file }}
 
     - name: Prepare prompt with PR data
       id: prepare-prompt
@@ -206,7 +275,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         REPOSITORY: ${{ github.repository }}
         BASE_BRANCH: ${{ inputs.base_branch || '' }}
-        PLAN: ${{ steps.plan-phase.outputs.output }}
+        PLAN: ${{ steps.extract-plan-claude.outputs.plan || steps.extract-plan-codex.outputs.plan || steps.plan-phase-codex.outputs.final-message || '' }}
 
     # Create branch for AI execution
     - name: Create branch
@@ -220,23 +289,26 @@ runs:
         PR_NUMBER: ${{ steps.prepare-prompt.outputs.pr_number }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
-    # Claude Code execution using shared script
+    # Claude Code execution using sanctioned action
     - name: Run Claude Code
       id: claude-code
       if: inputs.provider == 'claude'
-      shell: bash
-      run: cd ${{ github.action_path }} && bun run scripts/run-llm.ts
-      env:
-        PROVIDER: "claude"
-        PROMPT: ${{ steps.prepare-prompt.outputs.final_prompt }}
-        PERMISSION_MODE: "acceptEdits"
-        CAPTURE_OUTPUT: "false"
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
-        USE_BEDROCK: ${{ inputs.use_bedrock }}
-        USE_VERTEX: ${{ inputs.use_vertex }}
-        USE_FOUNDRY: ${{ inputs.use_foundry }}
-        CLAUDE_ARGS: ${{ inputs.claude_args }}
+      uses: anthropics/claude-code-action/base-action@main
+      with:
+        prompt: ${{ steps.prepare-prompt.outputs.final_prompt }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        use_bedrock: ${{ inputs.use_bedrock }}
+        use_vertex: ${{ inputs.use_vertex }}
+        use_foundry: ${{ inputs.use_foundry }}
+        claude_args: ${{ inputs.claude_args }}
+        settings: ${{ inputs.settings }}
+        use_node_cache: ${{ inputs.use_node_cache }}
+        path_to_claude_code_executable: ${{ inputs.path_to_claude_code_executable }}
+        path_to_bun_executable: ${{ inputs.path_to_bun_executable }}
+        show_full_output: ${{ inputs.show_full_output }}
+        plugins: ${{ inputs.plugins }}
+        plugin_marketplaces: ${{ inputs.plugin_marketplaces }}
 
     - name: Commit and push changes
       id: commit-push-claude

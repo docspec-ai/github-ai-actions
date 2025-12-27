@@ -1,6 +1,6 @@
 # GitHub AI Actions
 
-A composite GitHub Action that automatically runs AI code assistants (Claude Code or Codex) to create pull requests. Supports flexible triggers including PR merge events, comment events, manual dispatch, and more.
+A composite GitHub Action that automatically runs AI code assistants (Claude Code or Codex) to create pull requests. This action uses the sanctioned [`anthropics/claude-code-action/base-action`](https://github.com/anthropics/claude-code-action) and [`openai/codex-action`](https://github.com/openai/codex-action) to execute AI assistants. Supports flexible triggers including PR merge events, comment events, manual dispatch, and more.
 
 ## Features
 
@@ -65,13 +65,13 @@ This action supports two AI providers:
 
 ### Claude Code (Default)
 
-Claude Code automatically handles branch creation, commits, and changes. It's the default provider.
+This action uses the sanctioned [`anthropics/claude-code-action/base-action`](https://github.com/anthropics/claude-code-action) to execute Claude Code. The action handles branch creation, commits, and PR creation. It's the default provider.
 
 **Required**: `anthropic_api_key` or `claude_code_oauth_token`
 
 ### Codex
 
-Codex executes in your repository and makes changes directly. The action handles branch creation and PR creation.
+This action uses the sanctioned [`openai/codex-action`](https://github.com/openai/codex-action) to execute Codex. The action handles branch creation, commits, and PR creation.
 
 **Required**: `openai_api_key`
 
@@ -166,6 +166,9 @@ jobs:
 
             Generated with [Claude Code](https://claude.ai/code)
           claude_args: "--max-turns 5 --model claude-3-5-sonnet-20241022"
+          # Optional: Enable plan phase
+          # enable_plan: true
+          # plan_claude_args: "--model claude-opus-4-1-20250805"
 ```
 
 ### Advanced Example with Codex
@@ -229,12 +232,19 @@ jobs:
 
 ### Claude-Specific
 
-- `anthropic_api_key` - Anthropic API key for Claude Code
+- `anthropic_api_key` - Anthropic API key (required for direct Anthropic API)
 - `claude_code_oauth_token` - Claude Code OAuth token (alternative to API key)
-- `use_bedrock` - Use Amazon Bedrock (boolean, default: false)
-- `use_vertex` - Use Google Vertex AI (boolean, default: false)
-- `use_foundry` - Use Microsoft Foundry (boolean, default: false)
-- `claude_args` - Additional arguments for Claude Code CLI
+- `use_bedrock` - Use Amazon Bedrock with OIDC authentication (boolean, default: false)
+- `use_vertex` - Use Google Vertex AI with OIDC authentication (boolean, default: false)
+- `use_foundry` - Use Microsoft Foundry with OIDC authentication (boolean, default: false)
+- `claude_args` - Additional arguments to pass directly to Claude CLI (e.g., `--max-turns 3 --mcp-config /path/to/config.json`)
+- `settings` - Claude Code settings as JSON string or path to settings JSON file
+- `use_node_cache` - Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)
+- `path_to_claude_code_executable` - Optional path to a custom Claude Code executable
+- `path_to_bun_executable` - Optional path to a custom Bun executable
+- `show_full_output` - Show full JSON output from Claude Code (WARNING: may contain secrets)
+- `plugins` - Newline-separated list of Claude Code plugin names to install
+- `plugin_marketplaces` - Newline-separated list of Claude Code plugin marketplace Git URLs
 
 ### Codex-Specific
 
@@ -243,6 +253,12 @@ jobs:
 - `codex_args` - Extra arguments forwarded to `codex exec` (JSON array or shell-style string)
 - `codex_sandbox` - Sandbox mode: `workspace-write` (default), `read-only`, or `danger-full-access`
 - `codex_safety_strategy` - Safety strategy: `drop-sudo` (default), `unprivileged-user`, `read-only`, or `unsafe`
+
+### Plan Phase (Optional)
+
+- `enable_plan` - Enable plan phase before implementation (runs LLM twice: once for planning, once for implementation) (boolean, default: false)
+- `plan_prompt_template` - Optional prompt template for the plan phase. If not provided, uses a default plan prompt.
+- `plan_claude_args` - Additional arguments to pass directly to Claude CLI for plan phase (e.g., `--model claude-opus-4-1-20250805 --max-turns 3`)
 
 ### Common
 
@@ -272,8 +288,11 @@ The following variables can be used in `prompt_template`, `pr_title_template`, a
 4. **Data Extraction**: Fetches PR data (diff, metadata) using GitHub API
 5. **Variable Substitution**: Replaces placeholders in your prompt template with actual PR data
 6. **AI Execution**:
-   - **Claude**: Runs Claude Code Action which handles branch creation and commits automatically
-   - **Codex**: Runs Codex Action, then action creates branch, commits changes, and pushes
+   - **Plan Phase** (optional): If `enable_plan` is true, runs the AI in read-only mode to generate a plan, which is then included in the implementation prompt
+   - **Implementation Phase**: 
+     - **Claude**: Uses `anthropics/claude-code-action/base-action` to execute Claude Code
+     - **Codex**: Uses `openai/codex-action` to execute Codex
+   - **Branch Management**: Action creates a branch before execution and commits/pushes changes after
 7. **PR Creation**: If AI makes changes, automatically creates a new PR
 
 ## Custom Triggers
