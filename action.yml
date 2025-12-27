@@ -144,7 +144,6 @@ runs:
         show_full_output: ${{ inputs.show_full_output }}
         plugins: ${{ inputs.plugins }}
         plugin_marketplaces: ${{ inputs.plugin_marketplaces }}
-        plan_claude_args: ${{ inputs.plan_claude_args }}
         openai_api_key: ${{ inputs.openai_api_key }}
         responses_api_endpoint: ${{ inputs.responses_api_endpoint }}
         codex_args: ${{ inputs.codex_args }}
@@ -158,10 +157,3 @@ runs:
         enable_plan: ${{ inputs.enable_plan }}
         plan_prompt_template: ${{ inputs.plan_prompt_template }}
         plan_claude_args: ${{ inputs.plan_claude_args }}
-        settings: ${{ inputs.settings }}
-        use_node_cache: ${{ inputs.use_node_cache }}
-        path_to_claude_code_executable: ${{ inputs.path_to_claude_code_executable }}
-        path_to_bun_executable: ${{ inputs.path_to_bun_executable }}
-        show_full_output: ${{ inputs.show_full_output }}
-        plugins: ${{ inputs.plugins }}
-        plugin_marketplaces: ${{ inputs.plugin_marketplaces }}
