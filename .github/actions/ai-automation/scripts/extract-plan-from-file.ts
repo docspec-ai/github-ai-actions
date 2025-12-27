@@ -59,7 +59,7 @@ try {
 
   // If plan file doesn't exist or is empty, try to extract from execution_file
   if ((!plan || plan.length === 0) && EXECUTION_FILE && existsSync(EXECUTION_FILE)) {
-    console.log("Plan file not found, attempting to extract from execution_file...");
+    console.warn("Plan file not found, attempting to extract from execution_file...");
     plan = extractPlanFromExecutionFile(EXECUTION_FILE);
   }
 
