@@ -1,0 +1,3 @@
+"This file was created by AI automation for PR #5"
+"Original PR title: refactor: Use sanctioned GitHub Actions for Claude and Codex"
+"Author: winton"
