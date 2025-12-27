@@ -11,7 +11,7 @@ inputs:
   pr_number:
     description: "PR number to process. If not provided, will be extracted from the GitHub event context."
     required: false
-  # Claude-specific inputs (matching anthropics/claude-code-action/base-action)
+  # Claude-specific inputs (matching anthropics/claude-code-action@v1)
   anthropic_api_key:
     description: "Anthropic API key (required for direct Anthropic API)"
     required: false
@@ -207,7 +207,7 @@ runs:
     - name: Run plan phase (Claude)
       id: plan-phase-claude
       if: inputs.enable_plan == 'true' && inputs.provider == 'claude'
-      uses: anthropics/claude-code-action/base-action@main
+      uses: anthropics/claude-code-action@v1
       with:
         prompt: ${{ steps.prepare-plan-prompt.outputs.final_prompt }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
@@ -293,7 +293,7 @@ runs:
     - name: Run Claude Code
       id: claude-code
       if: inputs.provider == 'claude'
-      uses: anthropics/claude-code-action/base-action@main
+      uses: anthropics/claude-code-action@v1
       with:
         prompt: ${{ steps.prepare-prompt.outputs.final_prompt }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
