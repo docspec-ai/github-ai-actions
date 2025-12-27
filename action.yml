@@ -40,10 +40,6 @@ inputs:
     description: "Claude Code settings as JSON string or path to settings JSON file"
     required: false
     default: ""
-  use_node_cache:
-    description: "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
-    required: false
-    default: "false"
   path_to_claude_code_executable:
     description: "Optional path to a custom Claude Code executable. If provided, skips automatic installation and uses this executable instead."
     required: false
@@ -138,7 +134,6 @@ runs:
         use_foundry: ${{ inputs.use_foundry }}
         claude_args: ${{ inputs.claude_args }}
         settings: ${{ inputs.settings }}
-        use_node_cache: ${{ inputs.use_node_cache }}
         path_to_claude_code_executable: ${{ inputs.path_to_claude_code_executable }}
         path_to_bun_executable: ${{ inputs.path_to_bun_executable }}
         show_full_output: ${{ inputs.show_full_output }}

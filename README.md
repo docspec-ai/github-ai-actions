@@ -239,7 +239,6 @@ jobs:
 - `use_foundry` - Use Microsoft Foundry with OIDC authentication (boolean, default: false)
 - `claude_args` - Additional arguments to pass directly to Claude CLI (e.g., `--max-turns 3 --mcp-config /path/to/config.json`)
 - `settings` - Claude Code settings as JSON string or path to settings JSON file
-- `use_node_cache` - Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)
 - `path_to_claude_code_executable` - Optional path to a custom Claude Code executable
 - `path_to_bun_executable` - Optional path to a custom Bun executable
 - `show_full_output` - Show full JSON output from Claude Code (WARNING: may contain secrets)
